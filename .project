@@ -1,6 +1,6 @@
 # Gambas Project File 3.0
 # Compiled with Gambas 3.5.3
-Title=libdice
+Title=libpkdice
 Startup=FTest
 Icon=logo.png
 Version=0.0.1
@@ -9,6 +9,7 @@ Component=gb.image
 Component=gb.gui
 Component=gb.form
 Component=gb.media
+Library=/home/pata/git/libpkdice/libpkcommons.gambas
 Description="Dice Library for Gambas Applications"
 Authors="Patrik Karlsson"
 TabSize=2

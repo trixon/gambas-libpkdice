@@ -1,6 +1,10 @@
 # Gambas Form File 3.0
 
-{ FMain Form
-  MoveScaled(0,0,50,50)
+{ Form Form
+  MoveScaled(0,0,137.1429,50)
+  Arrangement = Arrange.Vertical
+  { Panel1 Panel
+    MoveScaled(1,1,45,24)
+    Expand = True
+  }
 }
-

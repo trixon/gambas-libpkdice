@@ -1,9 +1,54 @@
 ' Gambas class file
 
+Private $hDicePanel As CDicePanel
+
 Public Sub _new()
+
+  $hDicePanel = New CDicePanel(Me) As "DicePanel"
+  $hDicePanel.Enabled = True
+
+End
+
+Public Sub _free()
+
+End
+
+Public Sub Form_Close()
+
+  $hDicePanel.Close()
 
 End
 
 Public Sub Form_Open()
+
+  With $hDicePanel
+    .DiceCount = 5
+    .NewGame()
+    .NewTurn()
+    .DiceToFloor = 200
+  End With
+
+  Me.Center()
+  Me.Title = Application.Title & " " & Application.Version
+
+End
+
+Public Sub Form_KeyPress()
+
+  If Key.Code = Key.Esc Then
+    Me.Close()
+  Endif
+
+End
+
+Public Sub DicePanel_RollFinished()
+
+  $hDicePanel.Enabled = True
+
+End
+
+Public Sub DicePanel_RollRequest()
+
+  $hDicePanel.Roll()
 
 End

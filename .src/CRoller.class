@@ -1,0 +1,246 @@
+' Gambas class file
+
+Event RequestRoll()
+Event Shake()
+
+Property Enabled As Boolean
+Private Const IMAGE_NAME As String = "images/hand/closed/&1_&2.png"
+Private Const SOUND_SHAKE As String = "shake_&11.mp3"
+
+Private Const POS_X As Integer = 30
+
+Private $bClosing As Boolean
+Private $bEnabled As Boolean
+
+Private $hAnimateTimer As Timer
+Private $hDrawingArea As DrawingArea
+Private $hPlayer As MediaPlayer
+Private $hPictureBox As PictureBox
+Private $hShakeTimer As Timer
+
+Private $iDiceInHand As Integer
+Private $iMoveEnd As Integer
+Private $iMoveStep As Integer
+
+Public Sub _free()
+
+  Debug
+
+End
+
+Public Sub _new(hContainer As Container)
+
+  $hPlayer = New MediaPlayer As "MediaPlayer"
+  $hDrawingArea = New DrawingArea(hContainer) As "DrawingArea"
+
+  With $hDrawingArea
+    .Tracking = True
+    .W = 200
+    .H = .Parent.ClientH
+    .X = .Parent.Parent.W - .W
+  End With
+
+  $hPictureBox = New PictureBox($hDrawingArea) As "PictureBox"
+
+  With $hPictureBox
+    .AutoResize = True
+    .Hide
+  End With
+
+  Me.Enabled = True
+
+  $hAnimateTimer = New Timer As "Animate"
+  $hAnimateTimer.Delay = 10
+
+  $hShakeTimer = New Timer As "Shake"
+  $hShakeTimer.Delay = 1
+
+End
+
+Public Sub Animate_Timer()
+
+  If Abs($hPictureBox.X - $iMoveEnd) < Abs($iMoveStep) Then
+    $hPictureBox.X = $iMoveEnd
+    $hAnimateTimer.Stop()
+  Endif
+
+  If $hPictureBox.X <> $iMoveEnd Then
+    $hPictureBox.X = $hPictureBox.X + $iMoveStep
+  Else
+    $hAnimateTimer.Stop()
+  Endif
+
+  If Not $hAnimateTimer.Enabled Then
+    $hPictureBox.Visible = $iMoveStep < 0
+  Endif
+
+End
+
+Public Sub Close()
+
+  Debug
+
+  $bClosing = True
+  $hPlayer.Stop()
+  $hPlayer.Close()
+  $hShakeTimer.Stop()
+  $hAnimateTimer.Stop()
+
+End
+
+Private Sub MoveOut()
+
+  Debug
+
+  '   If $bClosing Then Return
+  $hPictureBox.X = POS_X
+  $iMoveEnd = $hDrawingArea.W
+  $iMoveStep = 10
+  $hAnimateTimer.Start()
+
+End
+
+Public Sub MediaPlayer_End()
+
+  $hPlayer.Position = 0
+  $hPlayer.Play()
+
+End
+
+Private Sub MoveIn()
+
+  $hPictureBox.X = $hDrawingArea.W
+  $iMoveEnd = 30
+  $iMoveStep = -10
+  $hAnimateTimer.Start()
+
+End
+
+Public Sub MoveToggle()
+
+  If Me.Selected Then
+    MoveIn()
+  Else
+    MoveOut()
+  Endif
+
+End
+
+Public Sub Open()
+
+End
+
+Public Sub Shake_Timer()
+
+  $hShakeTimer.Delay = Rnd(25, 50)
+  $hPictureBox.X = POS_X + Rnd(-20, 10)
+  $hPictureBox.Y = $hDrawingArea.H - $hPictureBox.H + 8 + Rnd(20)
+
+End
+
+Public Sub UpdateImage(iDiceInHand As Integer)
+
+  $iDiceInHand = iDiceInHand
+  $hPictureBox.Picture = Picture.Load(ImageName())
+  $hPictureBox.Y = $hDrawingArea.H - $hPictureBox.H
+
+End
+
+Public Sub PictureBox_MouseDown()
+
+  If $iDiceInHand And Mouse.Left Then
+    $hPlayer.URL = Media.URL(SoundName())
+    $hPlayer.Play()
+    $hShakeTimer.Start
+    Raise Shake()
+  Endif
+
+End
+
+Public Sub PictureBox_Leave()
+
+  If $bEnabled Then
+    $hPlayer.Stop()
+    $hShakeTimer.Stop()
+  Endif
+
+End
+
+Public Sub PictureBox_MouseUp()
+
+  Debug
+  $hPictureBox.X = POS_X
+
+  $hPlayer.Stop() 'TODO: Fade out .3
+  $hShakeTimer.Stop
+
+  If $iDiceInHand > 0 And ($hPictureBox.Hovered Or $hDrawingArea.Hovered) And Mouse.Left Then
+    '     Debug "RollRequest"
+    Me.Enabled = False
+    UpdateImage(0)
+    MoveOut()
+    Raise RequestRoll()
+    '    If $bClosing Then Return
+  Endif
+
+  'MoveOut()
+
+End
+
+Public Sub DrawingArea_Menu()
+
+  'Disables Form Popupmenu
+
+End
+
+Public Sub DrawingArea_MouseMove()
+
+  If Not $bEnabled Or $hAnimateTimer.Enabled Or $iDiceInHand = 0 Then
+    Return
+  Endif
+
+  If Mouse.X > 30 And If Not $hPictureBox.Visible Then
+    '     Debug "hand: animate in"
+    $hPictureBox.Show
+    MoveIn()
+    Return
+  End If
+
+  If $hPictureBox.Visible Then
+    '     Debug "hand: animate out"
+    MoveOut()
+    Return
+  End If
+
+End
+
+Private Function ImageName() As String
+
+  Dim sVariant As String
+
+  sVariant = Format(Int(Rnd(1, 3)), "00")
+  Return Subst(IMAGE_NAME, $iDiceInHand, sVariant)
+
+End
+
+Private Function SoundName() As String
+
+  Dim iDiceInHand As Integer
+
+  iDiceInHand = Min(5, $iDiceInHand)
+
+  Return CDicePanel.SoundPath(Subst(SOUND_SHAKE, iDiceInHand))
+
+End
+
+Private Function Enabled_Read() As Boolean
+
+  Return $bEnabled
+
+End
+
+Private Sub Enabled_Write(Value As Boolean)
+
+  $bEnabled = Value
+
+End

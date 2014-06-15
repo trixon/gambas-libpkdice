@@ -1,0 +1,515 @@
+' Gambas class file
+
+Export
+
+Event RollFinished()
+Event RollRequest()
+
+Property DiceCount As Integer
+Property Enabled As Boolean
+Property Read Panel As Panel
+Property Picture As Picture
+Property Read Values As Integer[]
+Property DiceToFloor As Integer
+
+Static Public Const SOUND_DIR As String = "sounds"
+Static Public ReverseMouseScroll As Boolean
+Private Const SOUND_ROLL As String = "roll_&1&2.mp3"
+
+Private $bClosing As Boolean
+Private $bEnabled As Boolean
+Private $bDiceOnFloor As Boolean
+
+Private $hDiceContainer As Panel
+Private $hMarginPanelLeft As Panel
+Private $hMarginPanelRight As Panel
+Private $hPanel As Panel
+Private $hPictureBox As PictureBox
+Private $hPlayer As MediaPlayer
+Private $hPlayerDtf As MediaPlayer
+Private $hRoller As CRoller
+
+Private $iDiceCount As Integer
+Private $iDiceToFloor As Integer = 50
+Private $iSelectedDice As Integer
+
+Private $aDice As CDie[] = New CDie[]
+
+Public Sub _new(hContainer As Container)
+
+  Debug "*** Remeber to close DicePanel on Form_Close."
+  ExtractSounds()
+  $hPlayer = New MediaPlayer As "MediaPlayer"
+  $hPanel = New Panel(hContainer) As "Panel"
+
+  With $hPanel
+    .Arrangement = Arrange.Horizontal
+    .H = 200
+  End With
+
+  ' $hPictureBox = New PictureBox($hPanel)
+  ' $hPictureBox.Picture = Picture.Load("dice-images/board/default.jpg")
+
+  $hDiceContainer = New Panel($hPanel)
+  With $hDiceContainer
+    .Arrangement = Arrange.Horizontal
+    .Expand = True
+  End With
+
+  $hRoller = New CRoller($hPanel) As "Roller"
+
+End
+
+Public Sub Roller_RequestRoll()
+
+  Raise RollRequest
+
+End
+
+Public Sub Roller_Shake()
+
+  Dim hDie As CDie
+
+  For Each hDie In $aDice
+    If hDie.Selected Then
+      hDie.Visible = False
+    Endif
+  Next
+
+End
+
+Public Sub Roll()
+
+  Dim i As Integer
+  Dim iNumOfDiceToRoll As Integer
+  Dim hDie As CDie
+  Dim aStopped As New Boolean[$iDiceCount]
+  Dim bDiceToFloor As Boolean = Int(Rnd(0, $iDiceToFloor)) = Int(Rnd(0, $iDiceToFloor))
+  Dim aSelectedDiceIndex As New Integer[]
+  Dim iDiceToFloorIndex As Integer
+
+  For i = 0 To $aDice.Max
+    hDie = $aDice[i]
+    hDie.RollPrepare()
+    If hDie.Selected Then
+      Inc iNumOfDiceToRoll
+      aSelectedDiceIndex.Add(i)
+    Endif
+  Next
+
+  iDiceToFloorIndex = Int(Rnd(0, aSelectedDiceIndex.Length))
+  iDiceToFloorIndex = aSelectedDiceIndex[iDiceToFloorIndex]
+
+  $bEnabled = False
+  $bDiceOnFloor = False
+  $hPlayer = New MediaPlayer As "MediaPlayer"
+  $hPlayer.URL = Media.URL(SoundNameRoll())
+  $hPlayer.Play()
+
+  While RollSoundIsPlaying() And Not $bClosing
+    For i = 0 To $aDice.Max
+      hDie = $aDice[i]
+      If Not $bClosing And hDie.Selected And Rnd > 0.2 And Not aStopped[i] Then
+        hDie.RollStep(Completion())
+        If Completion() > 0.6 And Not aStopped[i] And RollingDice(aStopped) > 1 Then
+          If bDiceToFloor And Not $bDiceOnFloor And i = iDiceToFloorIndex Then
+            aStopped[i] = True
+            $hPlayerDtf = New MediaPlayer As "MediaPlayerDtf"
+            $hPlayerDtf.URL = Media.URL(SoundPath("floor_drop_11.mp3"))
+            $hPlayerDtf.Play()
+            $bDiceOnFloor = True
+            hDie.MoveToFloor()
+          Endif
+        Endif
+
+        If Completion() > 0.7 And Not aStopped[i] And RollingDice(aStopped) > 1 Then
+          If Rnd > 0.6 Then
+            aStopped[i] = True
+            Dec iNumOfDiceToRoll
+          Endif
+        Endif
+      Endif
+    Next
+
+    If Completion() < CDie.VIBRATE_LIMIT Then
+      Wait Rnd(0.04, 0.08)
+    Else
+      Wait Rnd(0.02, 0.03)
+    Endif
+  Wend
+
+  $bEnabled = True
+
+  If $bDiceOnFloor Then
+  Else
+    For Each hDie In $aDice
+      hDie.Enabled = True
+      hDie.Selected = False
+    Next
+    RollPostOp()
+  Endif
+
+End
+
+Private Sub RollingDice(aStopped As Boolean[]) As Integer
+  'FIXME: This does not feel right...
+
+  Dim bStopped As Boolean
+  Dim iCount As Integer
+
+  For Each bStopped In aStopped
+    If Not bStopped Then Inc iCount
+  Next
+
+  Return iCount
+
+End
+
+Private Sub Completion() As Float
+
+  Return $hPlayer.Position / $hPlayer.Length
+Catch
+  Return 0
+
+End
+
+Private Sub RollSoundIsPlaying() As Boolean
+
+  Return $hPlayer.Position / $hPlayer.Length < 0.8
+Catch
+  Return True
+
+End
+
+Public Sub RollPostOp()
+
+  If Not $bClosing Then
+    Raise RollFinished
+    UpdateHand
+  Endif
+
+  $hRoller.Enabled = True
+
+End
+
+Private Sub ExtractSounds()
+
+  Dim sFile As String
+  Dim sTemp As String
+
+  For Each sFile In Dir(SOUND_DIR, "*.mp3")
+    sTemp = Temp$(sFile)
+    Copy SOUND_DIR &/ sFile To sTemp
+  Next
+
+End
+
+Public Sub Close()
+
+  Dim hDie As CDie
+
+  $bClosing = True
+  $hPlayer.Stop()
+  $hPlayer.Position = 0
+  Try $hPlayerDtf.Stop()
+  $hRoller.Close()
+
+  For Each hDie In $aDice
+    hDie.Close()
+  Next
+  Debug
+
+End
+
+Public Sub NewGame()
+
+  Reset()
+
+End
+
+Public Sub Open()
+
+  Dim hDie As CDie
+
+  $hRoller.Open()
+
+  For Each hDie In $aDice
+    hDie.Open()
+  Next
+
+End
+
+Public Sub Panel_Arrange()
+
+  Dim iMargin As Integer
+
+  iMargin = $hPanel.Width - $iDiceCount * 200
+  Try $hMarginPanelLeft.Width = iMargin / 2
+  Try $hMarginPanelRight.Width = iMargin / 2 - 200
+
+End
+
+Public Sub MarginPanel_MouseWheel()
+
+  If Not $bEnabled Then Return
+  If Mouse.Forward Xor CDicePanel.ReverseMouseScroll Then
+    SelectAllDice(True)
+  Else
+    SelectAllDice(False)
+  Endif
+
+End
+
+Private Sub NewTurnDiceToFloor()
+
+  Dim hDie As CDie
+
+  Me.Enabled = True
+
+  For Each hDie In $aDice
+    If hDie.OnFloor Then
+      hDie.MoveInFromTop()
+    Else
+      If hDie.Selected Then hDie.MoveUpToTop()
+    Endif
+    hDie.Enabled = False
+  Next
+
+  UpdateHand()
+
+End
+
+Public Sub MediaPlayerDtf_End()
+
+  NewTurnDiceToFloor()
+
+End
+
+Private Function Panel_Read() As Panel
+
+  Return $hPanel
+
+End
+
+Private Function Picture_Read() As Picture
+
+  Return $hPictureBox.Picture
+
+End
+
+Private Sub Picture_Write(Value As Picture)
+
+  $hPictureBox.Picture = Value
+
+End
+
+Public Sub Reset()
+
+  Dim hDie As CDie
+
+  For Each hDie In $aDice
+    hDie.Reset
+  Next
+
+  $bEnabled = False
+  UpdateHand()
+
+End
+
+Public Sub Die_Toggled()
+
+  UpdateHand
+
+End
+
+Private Sub UpdateHand()
+
+  Dim hDie As CDie
+
+  $iSelectedDice = 0
+
+  For Each hDie In $aDice
+    If hDie.Selected Then Inc $iSelectedDice
+  Next
+
+  $hRoller.UpdateImage($iSelectedDice)
+
+End
+
+Public Sub Die_Up()
+
+  SelectAllDice(False)
+
+End
+
+Public Sub Die_Down()
+
+  SelectAllDice(True)
+
+End
+
+Public Sub Die_InvertSelection()
+
+  Dim i As Integer
+
+  For i = 0 To $iDiceCount - 1
+    $aDice[i].MoveToggle()
+    $aDice[i].Selected = Not $aDice[i].Selected
+  Next
+
+End
+
+Static Public Sub SoundPath(sFilename As String) As String
+
+  Return Temp$(sFilename)
+
+End
+
+Private Sub SelectAllDice(Value As Boolean)
+
+  Dim i As Integer
+
+  For i = 0 To $iDiceCount - 1
+    If $aDice[i].Selected <> Value Then
+      $aDice[i].MoveToggle()
+      $aDice[i].Selected = Value
+    Endif
+  Next
+
+  UpdateHand
+
+End
+
+Private Function DiceCount_Read() As Integer
+
+  Return $iDiceCount
+
+End
+
+Private Sub DiceCount_Write(Value As Integer)
+
+  $iDiceCount = Value
+  InitDice()
+
+End
+
+Private Sub InitDice()
+
+  Dim i As Integer
+
+  $hDiceContainer.Children.Clear
+  $aDice.Resize($iDiceCount)
+
+  $hMarginPanelLeft = New Panel($hDiceContainer) As "MarginPanel"
+
+  For i = 0 To $iDiceCount - 1
+    $aDice[i] = New CDie(i, $hDiceContainer) As "Die"
+    With $aDice[i]
+      .Value = Int(Rnd(1, 7))
+    End With
+  Next
+
+  $hMarginPanelRight = New Panel($hDiceContainer) As "MarginPanel"
+
+  Reset()
+  Panel_Arrange()
+
+End
+
+Private Function SoundNameRoll() As String
+
+  Dim sVariant As String
+  Dim iSelectedDice As Integer
+
+  iSelectedDice = Min(5, $iSelectedDice)
+  sVariant = Format(Int(Rnd(1, 5)), "0")
+
+  Return SoundPath(Subst(SOUND_ROLL, iSelectedDice, sVariant))
+
+End
+
+Public Sub MarginPanel_Menu()
+
+  'Disables Form Popupmenu
+
+End
+
+Private Function Values_Read() As Integer[]
+
+  Dim aValues As New Integer[$iDiceCount]
+  Dim i As Integer
+
+  For i = 0 To $iDiceCount - 1
+    aValues[i] = $aDice[i].Value
+  Next
+
+  Return aValues
+
+End
+
+Public Sub GameOver()
+
+  Debug
+
+End
+
+Public Sub NewTurn()
+
+  Dim i As Integer
+
+  Debug
+  Me.Enabled = True
+
+  For i = 0 To $iDiceCount - 1
+    $aDice[i].NewTurn()
+  Next
+
+  UpdateHand()
+
+End
+
+Public Sub Undo()
+
+  Dim i As Integer
+
+  Debug
+  Me.Enabled = False
+  For i = 0 To $iDiceCount - 1
+    $aDice[i].Undo()
+  Next
+
+  'Die_Up()
+
+End
+
+Private Function DiceToFloor_Read() As Integer
+
+  Return $iDiceToFloor
+
+End
+
+Private Sub DiceToFloor_Write(Value As Integer)
+
+  $iDiceToFloor = Value
+
+End
+
+Private Function Enabled_Read() As Boolean
+
+  Return $bEnabled
+
+End
+
+Private Sub Enabled_Write(Value As Boolean)
+
+  Dim i As Integer
+
+  $bEnabled = Value
+  '   $hPanel.Enabled = Value
+  $hRoller.Enabled = Value
+
+  For i = 0 To $iDiceCount - 1
+    $aDice[i].Enabled = Value
+  Next
+
+End

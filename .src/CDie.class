@@ -1,0 +1,380 @@
+' Gambas class file
+
+Event Down
+Event InvertSelection
+Event Toggled
+Event Up
+
+Property Enabled As Boolean
+Property Read OnFloor As Boolean
+Property Selected As Boolean
+Property Tag As Variant
+Property Value As Integer
+Property Visible As Boolean
+
+Static Public Const VIBRATE_LIMIT As Float = 0.6
+Private Const IMAGE_NAME As String = "images/dice/&1_&2.png"
+Private Const SOUND_NAME As String = "select_1&1.mp3"
+
+Private $bClosing As Boolean
+Private $bEnabled As Boolean
+Private $bMoveToFloor As Boolean
+Private $bOnFloor As Boolean
+Private $bSelected As Boolean
+
+Private $hAnimateTimer As Timer
+Private $hPanel As Panel
+Private $hPictureBox As PictureBox
+Private $hPlayer As MediaPlayer
+
+Private $iMoveEnd As Integer
+Private $iMoveStep As Integer
+Private $iStoredPosX As Integer
+Private $iStoredPosY As Integer
+Private $iValue As Integer = 5
+
+Private $vTag As Variant
+
+Public Sub _new(vTag As Variant, hContainer As Container)
+
+  $vTag = vTag
+  $hPanel = New Panel(hContainer) As "Panel"
+
+  With $hPanel
+    '     .Border = Border.Plain
+    .Expand = True
+  End With
+
+  $hPictureBox = New PictureBox($hPanel) As "Panel"
+
+  With $hPictureBox
+    .AutoResize = True
+    .Picture = Picture.Load(ImageName())
+  End With
+
+  $hAnimateTimer = New Timer As "Animate"
+  $hAnimateTimer.Delay = 30
+
+  Reset()
+
+End
+
+Private Sub Spin(fCompletion As Float, RestrictY As Boolean)
+
+  Dim iMarginX As Integer
+  Dim iMarginY As Integer
+  Dim iDeltaX As Integer
+  Dim iDeltaY As Integer
+  Dim iMaxMove As Integer
+  Dim fRotation As Float
+  Dim fRotationSpan As Float = Pi * (1 - fCompletion)
+
+  With $hPictureBox
+    iMarginX = (.Parent.W - .Picture.W) / 2 - 8
+    iMarginY = (.Parent.H - .Picture.H) / 2 - 8
+
+    If fCompletion < VIBRATE_LIMIT Then
+      iMaxMove = 12
+      fRotation = - fRotationSpan / 2 + Rnd() * fRotationSpan
+      $hPictureBox.Picture = $hPictureBox.Picture.Image.Rotate(fRotation).Picture
+    Else
+      iMaxMove = 6
+    Endif
+
+    iDeltaX = Rnd(- iMaxMove, iMaxMove)
+    iDeltaY = Rnd(- iMaxMove, iMaxMove)
+
+    If iDeltaX > iMarginX Then iDeltaX = iMarginX
+    If iDeltaX < - iMarginX Then iDeltaX = - iMarginX
+
+    If iDeltaY > iMarginY Then iDeltaY = iMarginY
+    If iDeltaY < - iMarginY Then iDeltaY = - iMarginY
+
+    .Move(.X + iDeltaX, .Y + iDeltaY)
+
+    If .X < 0 Then
+      .X = 0
+    Else If .X > .Parent.Width - .Width Then
+      .X = .Parent.Width - .Width
+    Endif
+
+    If RestrictY Then
+      If .Y < 0 Then
+        .Y = 0
+      Else If .Y > .Parent.Height - .Height Then
+        .Y = .Parent.Height - .Height
+      Endif
+    Endif
+
+    $iStoredPosX = .X
+    $iStoredPosY = .Y
+  End With
+
+End
+
+Private Sub PlaySelectSound()
+
+  $hPlayer = New MediaPlayer
+  $hPlayer.URL = Media.URL(SoundName())
+  $hPlayer.Play()
+
+End
+
+Public Sub MoveInFromTop()
+
+  MoveDown(- $hPictureBox.Height, 0, 60)
+
+End
+
+Public Sub MoveUpToTop()
+
+  MoveUp($hPictureBox.Y, 0, 60)
+
+End
+
+Private Sub MoveDown(Optional FromY As Integer = $hPictureBox.Y, ToY As Integer = $hPanel.H, AnimDelay As Integer = 30)
+  ' PlaySelectSound()
+
+  $hAnimateTimer.Delay = AnimDelay
+  $hPictureBox.Y = FromY
+  $iMoveEnd = ToY
+  $iMoveStep = 20
+  $hAnimateTimer.Start()
+
+End
+
+Private Sub MoveUp(Optional FromY As Integer = $hPictureBox.Y, ToY As Integer = $iStoredPosY, AnimDelay As Integer = 30)
+  ' PlaySelectSound()
+
+  $hAnimateTimer.Delay = AnimDelay
+  $hPictureBox.Y = FromY
+  $iMoveEnd = ToY
+  $iMoveStep = -20
+  $hAnimateTimer.Start()
+
+End
+
+Public Sub MoveToFloor()
+
+  $bMoveToFloor = True
+  $hAnimateTimer.Delay = 90
+  $hAnimateTimer.Start()
+
+End
+
+Public Sub MoveToggle()
+
+  If Me.Selected Then
+    MoveUp()
+  Else
+    MoveDown()
+  Endif
+
+End
+
+Public Sub Animate_Timer()
+
+  If $bMoveToFloor Then
+    If $hPictureBox.Y < $hPanel.Height - $hPictureBox.Y * 0.8 Then
+      RollStep(0.1, False)
+    Endif
+
+    $hPictureBox.Y = $hPictureBox.Y + 18
+
+    If $hPictureBox.Y > $hPanel.Height Then
+      $hAnimateTimer.Stop()
+      $bMoveToFloor = False
+      $bOnFloor = True
+      $hPictureBox.Picture = Picture.Load(ImageName())
+    Endif
+  Else
+    If Abs($hPictureBox.Y - $iMoveEnd) < Abs($iMoveStep) Then
+      $hPictureBox.Y = $iMoveEnd
+      $hAnimateTimer.Stop()
+    Endif
+
+    If $hPictureBox.Y <> $iMoveEnd Then
+      $hPictureBox.Y = $hPictureBox.Y + $iMoveStep
+    Else
+      $hAnimateTimer.Stop()
+    Endif
+  Endif
+
+End
+
+Public Sub Delete()
+
+  $hPanel.Delete
+  $hPanel = Null
+  $hPictureBox = Null
+
+End
+
+Public Sub Reset()
+
+  Me.Selected = True
+  $hPictureBox.Y = $hPanel.H
+
+End
+
+Public Sub Panel_Menu()
+
+  'Disables Form Popupmenu
+
+End
+
+Public Sub Panel_MouseDown()
+
+  If Not $bEnabled Then Return
+  MoveToggle()
+  Me.Selected = Not Me.Selected
+
+  If Mouse.Right Then
+    Raise InvertSelection
+  Endif
+
+  Raise Toggled
+
+End
+
+Public Sub Panel_MouseWheel()
+
+  If Not $bEnabled Then Return
+  If Mouse.Forward Xor CDicePanel.ReverseMouseScroll Then
+    Raise Down
+  Else
+    Raise Up
+  Endif
+
+End
+
+Public Sub RollPrepare()
+
+  $bEnabled = False
+  $bOnFloor = False
+  If $bSelected Then MGuiUtils.CenterInParent($hPictureBox)
+
+End
+
+Public Sub RollStep(fCompletion As Float, Optional RestrictY As Boolean = True)
+
+  $hPictureBox.Visible = True
+  If fCompletion < VIBRATE_LIMIT + 0.05 Then
+    Me.Value = Int(Rnd(1, 7))
+  Endif
+
+  $hPictureBox.Picture = Picture.Load(ImageName())
+  Spin(fCompletion, RestrictY)
+
+End
+
+Public Sub Undo()
+
+  Me.Visible = True
+  $hPictureBox.Top = $hPictureBox.Parent.Height
+  MoveUp()
+
+End
+
+Public Sub Close()
+
+  $bClosing = True
+  $hAnimateTimer.Stop()
+
+End
+
+Public Sub Open()
+
+End
+
+Public Sub NewTurn()
+
+  '   MoveDown()
+  $hPictureBox.Visible = False
+  $bSelected = True
+
+End
+
+Private Function Value_Read() As Integer
+
+  Return $iValue
+
+End
+
+Private Sub Value_Write(Value As Integer)
+
+  $iValue = Value
+
+End
+
+Private Function Tag_Read() As Variant
+
+  Return $vTag
+
+End
+
+Private Sub Tag_Write(Value As Variant)
+
+  $vTag = Value
+
+End
+
+Private Function ImageName() As String
+
+  Dim sVariant As String
+
+  sVariant = Format(Int(Rnd(1, 5)), "00")
+  Return Subst(IMAGE_NAME, $iValue, sVariant)
+
+End
+
+Private Function Selected_Read() As Boolean
+
+  Return $bSelected
+
+End
+
+Private Sub Selected_Write(Value As Boolean)
+
+  $bSelected = Value
+
+End
+
+Private Function Enabled_Read() As Boolean
+
+  Return $bEnabled
+
+End
+
+Private Sub Enabled_Write(Value As Boolean)
+
+  $bEnabled = Value
+
+End
+
+Private Function SoundName() As String
+
+  Dim sVariant As String
+
+  sVariant = Format(Int(Rnd(1, 3)), "0")
+  Return CDicePanel.SoundPath(Subst(SOUND_NAME, sVariant))
+
+End
+
+Private Function Visible_Read() As Boolean
+
+  Return $hPictureBox.Visible
+
+End
+
+Private Sub Visible_Write(Value As Boolean)
+
+  $hPictureBox.Visible = Value
+
+End
+
+Private Function OnFloor_Read() As Boolean
+
+  Return $bOnFloor
+
+End

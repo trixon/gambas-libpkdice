@@ -1,5 +1,5 @@
 FTest
-libdice
+libpkdice
 0
 0
 0.0.1
@@ -8,4 +8,5 @@ gb.image
 gb.gui
 gb.form
 gb.media
+/home/pata/git/libpkdice/libpkcommons.gambas
 
