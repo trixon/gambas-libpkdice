@@ -1,0 +1,16 @@
+# Gambas Project File 3.0
+# Compiled with Gambas 3.5.3
+Title=libdice
+Startup=FTest
+Icon=logo.png
+Version=0.0.1
+VersionFile=1
+Component=gb.image
+Component=gb.gui
+Component=gb.form
+Component=gb.media
+Description="Dice Library for Gambas Applications"
+Authors="Patrik Karlsson"
+TabSize=2
+Type=Library
+Packager=1

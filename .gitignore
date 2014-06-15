@@ -1,0 +1,15 @@
+.lock
+*~
+*.gambas
+.settings
+.lock
+core
+core.*
+vgcore
+vgcore.*
+.kdbg*
+.*.prof
+.lang/*.pot
+.directory
+.info
+
