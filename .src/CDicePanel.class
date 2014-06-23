@@ -37,7 +37,7 @@ Private $aDice As CDie[] = New CDie[]
 
 Public Sub _new(hContainer As Container)
 
-  Debug "*** Remeber to close DicePanel on Form_Close."
+  Debug "*** Remember to close DicePanel on Form_Close."
   ExtractSounds()
   $hPlayer = New MediaPlayer As "MediaPlayer"
   $hPanel = New Panel(hContainer) As "Panel"
