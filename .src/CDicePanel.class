@@ -449,7 +449,7 @@ End
 
 Public Sub GameOver()
 
-  Debug
+  Me.Enabled = False
 
 End
 
