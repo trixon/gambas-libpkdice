@@ -269,7 +269,7 @@ Private Sub NewTurnDiceToFloor()
 
   Dim hDie As CDie
 
-  Me.Enabled = True
+  Me.RollEnabled = True
 
   For Each hDie In $aDice
     If hDie.OnFloor Then
@@ -480,7 +480,9 @@ Public Sub Undo()
   Dim i As Integer
 
   Debug
-  Me.Enabled = False
+  Me.RollEnabled = False
+  Me.SelectEnabled = False
+
   For i = 0 To $iDiceCount - 1
     $aDice[i].Undo()
   Next
