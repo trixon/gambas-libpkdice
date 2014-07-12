@@ -3,14 +3,15 @@
 Title=libpkdice
 Startup=FTest
 Icon=logo.png
-Version=0.0.2
+Version=0.0.7
 Component=gb.image
 Component=gb.gui
 Component=gb.form
 Component=gb.media
 Library=/home/pata/git/gambas/libpkdice/libpkcommons.gambas
-Description="Dice Library for Gambas Applications"
+Description="Dice library for Gambas Applications"
 Authors="Patrik Karlsson"
 TabSize=2
+KeepDebugInfo=0
 Type=Library
 Packager=1

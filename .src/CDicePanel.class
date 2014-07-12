@@ -6,19 +6,21 @@ Event RollFinished()
 Event RollRequest()
 
 Property DiceCount As Integer
-Property Enabled As Boolean
+Property DiceToFloor As Integer
 Property Read Panel As Panel
 Property Picture As Picture
+Property RollEnabled As Boolean
+Property SelectEnabled As Boolean
 Property Read Values As Integer[]
-Property DiceToFloor As Integer
 
 Static Public Const SOUND_DIR As String = "sounds"
 Static Public ReverseMouseScroll As Boolean
 Private Const SOUND_ROLL As String = "roll_&1&2.mp3"
 
 Private $bClosing As Boolean
-Private $bEnabled As Boolean
 Private $bDiceOnFloor As Boolean
+Private $bRollEnabled As Boolean
+Private $bSelectEnabled As Boolean
 
 Private $hDiceContainer As Panel
 Private $hMarginPanelLeft As Panel
@@ -100,7 +102,8 @@ Public Sub Roll()
   iDiceToFloorIndex = Int(Rnd(0, aSelectedDiceIndex.Length))
   iDiceToFloorIndex = aSelectedDiceIndex[iDiceToFloorIndex]
 
-  $bEnabled = False
+  $bRollEnabled = False
+  $bSelectEnabled = False
   $bDiceOnFloor = False
   $hPlayer = New MediaPlayer As "MediaPlayer"
   $hPlayer.URL = Media.URL(SoundNameRoll())
@@ -138,7 +141,8 @@ Public Sub Roll()
     Endif
   Wend
 
-  $bEnabled = True
+  $bRollEnabled = True
+  $bSelectEnabled = True
 
   If $bDiceOnFloor Then
   Else
@@ -251,7 +255,8 @@ End
 
 Public Sub MarginPanel_MouseWheel()
 
-  If Not $bEnabled Then Return
+  If Not $bSelectEnabled Then Return
+
   If Mouse.Forward Xor CDicePanel.ReverseMouseScroll Then
     SelectAllDice(True)
   Else
@@ -311,7 +316,8 @@ Public Sub Reset()
     hDie.Reset
   Next
 
-  $bEnabled = False
+  $bRollEnabled = False
+  $bSelectEnabled = False
   UpdateHand()
 
 End
@@ -449,7 +455,8 @@ End
 
 Public Sub GameOver()
 
-  Me.Enabled = False
+  Me.RollEnabled = False
+  Me.SelectEnabled = False
 
 End
 
@@ -458,7 +465,7 @@ Public Sub NewTurn()
   Dim i As Integer
 
   Debug
-  Me.Enabled = True
+  Me.RollEnabled = True
 
   For i = 0 To $iDiceCount - 1
     $aDice[i].NewTurn()
@@ -494,19 +501,30 @@ Private Sub DiceToFloor_Write(Value As Integer)
 
 End
 
-Private Function Enabled_Read() As Boolean
+Private Function RollEnabled_Read() As Boolean
 
-  Return $bEnabled
+  Return $bRollEnabled
 
 End
 
-Private Sub Enabled_Write(Value As Boolean)
+Private Sub RollEnabled_Write(Value As Boolean)
+
+  $bRollEnabled = Value
+  $hRoller.Enabled = Value
+
+End
+
+Private Function SelectEnabled_Read() As Boolean
+
+  Return $bSelectEnabled
+
+End
+
+Private Sub SelectEnabled_Write(Value As Boolean)
 
   Dim i As Integer
 
-  $bEnabled = Value
-  '   $hPanel.Enabled = Value
-  $hRoller.Enabled = Value
+  $bSelectEnabled = Value
 
   For i = 0 To $iDiceCount - 1
     $aDice[i].Enabled = Value

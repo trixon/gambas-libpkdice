@@ -1,6 +1,6 @@
 [Component]
 Key=libpkdice
-Version=0.0.1
+Version=0.0.4
 State=2
 Authors=Patrik Karlsson
 Requires=libpkcommons.gambas

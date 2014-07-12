@@ -1,4 +1,4 @@
-gambas-libdice
+gambas-libpkdice
 ==============
 
-Dice Library for Gambas Applications
+Dice library for Gambas Applications

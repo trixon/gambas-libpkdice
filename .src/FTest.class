@@ -5,7 +5,7 @@ Private $hDicePanel As CDicePanel
 Public Sub _new()
 
   $hDicePanel = New CDicePanel(Me) As "DicePanel"
-  $hDicePanel.Enabled = True
+  $hDicePanel.RollEnabled = True
 
 End
 
@@ -43,7 +43,8 @@ End
 
 Public Sub DicePanel_RollFinished()
 
-  $hDicePanel.Enabled = True
+  $hDicePanel.RollEnabled = True
+  $hDicePanel.SelectEnabled = True
 
 End
 
