@@ -1,9 +1,9 @@
 # Gambas Project File 3.0
-# Compiled with Gambas 3.5.3
+# Compiled with Gambas 3.7.0
 Title=libpkdice
 Startup=FTest
 Icon=logo.png
-Version=0.0.8
+Version=0.0.11
 Component=gb.image
 Component=gb.gui
 Component=gb.form
