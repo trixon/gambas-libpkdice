@@ -22,12 +22,6 @@ Private $iDiceInHand As Integer
 Private $iMoveEnd As Integer
 Private $iMoveStep As Integer
 
-Public Sub _free()
-
-  Debug
-
-End
-
 Public Sub _new(hContainer As Container)
 
   $hPlayer = New MediaPlayer As "MediaPlayer"
@@ -78,8 +72,6 @@ End
 
 Public Sub Close()
 
-  Debug
-
   $bClosing = True
   $hPlayer.Stop()
   $hPlayer.Close()
@@ -89,8 +81,6 @@ Public Sub Close()
 End
 
 Private Sub MoveOut()
-
-  Debug
 
   '   If $bClosing Then Return
   $hPictureBox.X = POS_X
@@ -168,7 +158,6 @@ End
 
 Public Sub PictureBox_MouseUp()
 
-  Debug
   $hPictureBox.X = POS_X
 
   $hPlayer.Stop() 'TODO: Fade out .3
@@ -206,11 +195,11 @@ Public Sub DrawingArea_MouseMove()
     Return
   End If
 
-  If $hPictureBox.Visible Then
-    '     Debug "hand: animate out"
-    MoveOut()
-    Return
-  End If
+  ' If $hPictureBox.Visible Then
+  '   '     Debug "hand: animate out"
+  '   MoveOut()
+  '   Return
+  ' End If
 
 End
 

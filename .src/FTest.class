@@ -9,10 +9,6 @@ Public Sub _new()
 
 End
 
-Public Sub _free()
-
-End
-
 Public Sub Form_Close()
 
   $hDicePanel.Close()

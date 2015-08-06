@@ -221,7 +221,6 @@ Public Sub Close()
   For Each hDie In $aDice
     hDie.Close()
   Next
-  Debug
 
 End
 
@@ -464,7 +463,6 @@ Public Sub NewTurn()
 
   Dim i As Integer
 
-  Debug
   Me.RollEnabled = True
 
   For i = 0 To $iDiceCount - 1
